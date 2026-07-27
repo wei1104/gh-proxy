@@ -1,186 +1,144 @@
-'use strict'
-
-/**
- * static files (404.html, sw.js, conf.js)
- */
 const ASSET_URL = 'https://hunshcn.github.io/gh-proxy/'
-// 前缀，如果自定义路由为example.com/gh/*，将PREFIX改为 '/gh/'，注意，少一个杠都会错！
 const PREFIX = '/'
-// 分支文件使用jsDelivr镜像的开关，0为关闭，默认关闭
+const CACHE_TTL = 300
+
 const Config = {
-    jsdelivr: 0
+  jsdelivr: 0
 }
 
-const whiteList = [] // 白名单，路径里面有包含字符的才会通过，e.g. ['/username/']
+const whiteList = []
 
-/** @type {ResponseInit} */
+const PATTERNS = [
+  /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i,
+  /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|raw)\/.*$/i,
+  /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i,
+  /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+?\/.+$/i,
+  /^(?:https?:\/\/)?gist\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+$/i,
+  /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/tags.*$/i,
+  /^(?:https?:\/\/)?objects\.githubusercontent\.com\/.*$/i,
+]
+
 const PREFLIGHT_INIT = {
-    status: 204,
-    headers: new Headers({
-        'access-control-allow-origin': '*',
-        'access-control-allow-methods': 'GET,POST,PUT,PATCH,TRACE,DELETE,HEAD,OPTIONS',
-        'access-control-max-age': '1728000',
-    }),
+  status: 204,
+  headers: {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS',
+    'access-control-max-age': '1728000',
+  },
 }
 
+function matchPath(path) {
+  return PATTERNS.some(p => p.test(path))
+}
 
-const exp1 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i
-const exp2 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|raw)\/.*$/i
-const exp3 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i
-const exp4 = /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+?\/.+$/i
-const exp5 = /^(?:https?:\/\/)?gist\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+$/i
-const exp6 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/tags.*$/i
-
-/**
- * @param {any} body
- * @param {number} status
- * @param {Object<string, string>} headers
- */
 function makeRes(body, status = 200, headers = {}) {
-    headers['access-control-allow-origin'] = '*'
-    return new Response(body, { status, headers })
+  headers['access-control-allow-origin'] = '*'
+  return new Response(body, { status, headers })
 }
 
+function normalizeUrl(raw) {
+  let url = raw.replace(/^https?:\/\/+/, 'https://')
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url
+  return url
+}
 
-/**
- * @param {string} urlStr
- */
-function newUrl(urlStr) {
+function checkWhiteList(urlStr) {
+  if (!whiteList.length) return true
+  return whiteList.some(i => urlStr.includes(i))
+}
+
+export default {
+  async fetch(req, env, ctx) {
     try {
-        return new URL(urlStr)
+      return await handleRequest(req, ctx)
     } catch (err) {
-        return null
+      return makeRes(err.stack, 502)
     }
+  },
 }
 
+async function handleRequest(req, ctx) {
+  const url = new URL(req.url)
+  let path = url.searchParams.get('q')
+  if (path) {
+    return Response.redirect(`${url.origin}${PREFIX}${path}`, 301)
+  }
 
-addEventListener('fetch', e => {
-    const ret = fetchHandler(e)
-        .catch(err => makeRes('cfworker error:\n' + err.stack, 502))
-    e.respondWith(ret)
-})
+  path = url.href.slice(url.origin.length + PREFIX.length)
+  path = normalizeUrl(path)
 
+  if (!matchPath(path)) {
+    return fetch(ASSET_URL + url.pathname)
+  }
 
-function checkUrl(u) {
-    for (let i of [exp1, exp2, exp3, exp4, exp5, exp6]) {
-        if (u.search(i) === 0) {
-            return true
-        }
-    }
-    return false
+  if (req.method === 'OPTIONS' && req.headers.has('access-control-request-headers')) {
+    return new Response(null, PREFLIGHT_INIT)
+  }
+
+  return proxy(req, path, ctx)
 }
 
-/**
- * @param {FetchEvent} e
- */
-async function fetchHandler(e) {
-    const req = e.request
-    const urlStr = req.url
-    const urlObj = new URL(urlStr)
-    let path = urlObj.searchParams.get('q')
-    if (path) {
-        return Response.redirect('https://' + urlObj.host + PREFIX + path, 301)
+async function proxy(req, pathname, ctx) {
+  if (!checkWhiteList(pathname)) {
+    return new Response('blocked', { status: 403 })
+  }
+
+  const urlObj = new URL(normalizeUrl(pathname))
+
+  if (req.method === 'GET' && !req.headers.get('range')) {
+    const cache = await caches.open('gh-proxy')
+    const cached = await cache.match(urlObj.href)
+    if (cached) return cached
+  }
+
+  const reqHeaders = new Headers(req.headers)
+  reqHeaders.delete('host')
+
+  const init = {
+    method: req.method,
+    headers: reqHeaders,
+    redirect: 'manual',
+    body: req.method === 'GET' || req.method === 'HEAD' ? null : req.body,
+  }
+
+  let res = await fetch(urlObj.href, init)
+
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get('location')
+    if (location) {
+      if (matchPath(location)) {
+        res.headers.set('location', PREFIX + location)
+        return buildResponse(res)
+      }
+      init.redirect = 'follow'
+      res = await fetch(new URL(location, urlObj).href, init)
     }
-    // cfworker 会把路径中的 `//` 合并成 `/`
-    path = urlObj.href.slice(urlObj.origin.length + PREFIX.length).replace(/^https?:\/+/, 'https://')
-    if (path.search(exp1) === 0 || path.search(exp5) === 0 || path.search(exp6) === 0 || path.search(exp3) === 0) {
-        return httpHandler(req, path)
-    } else if (path.search(exp2) === 0) {
-        if (Config.jsdelivr) {
-            const newUrl = path.replace('/blob/', '@').replace(/^(?:https?:\/\/)?github\.com/, 'https://cdn.jsdelivr.net/gh')
-            return Response.redirect(newUrl, 302)
-        } else {
-            path = path.replace('/blob/', '/raw/')
-            return httpHandler(req, path)
-        }
-    } else if (path.search(exp4) === 0) {
-        if (Config.jsdelivr) {
-            const newUrl = path.replace(/(?<=com\/.+?\/.+?)\/(.+?\/)/, '@$1').replace(/^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com/, 'https://cdn.jsdelivr.net/gh')
-            return Response.redirect(newUrl, 302)
-        }
-        else {
-            return httpHandler(req, path)
-        }
-    } else {
-        return fetch(ASSET_URL + path)
-    }
+  }
+
+  if (req.method === 'GET' && !req.headers.get('range') && res.status === 200) {
+    const clone = res.clone()
+    ctx.waitUntil(cacheResponse(urlObj.href, clone))
+  }
+
+  return buildResponse(res)
 }
 
-
-/**
- * @param {Request} req
- * @param {string} pathname
- */
-function httpHandler(req, pathname) {
-    const reqHdrRaw = req.headers
-
-    // preflight
-    if (req.method === 'OPTIONS' &&
-        reqHdrRaw.has('access-control-request-headers')
-    ) {
-        return new Response(null, PREFLIGHT_INIT)
-    }
-
-    const reqHdrNew = new Headers(reqHdrRaw)
-
-    let urlStr = pathname
-    let flag = !Boolean(whiteList.length)
-    for (let i of whiteList) {
-        if (urlStr.includes(i)) {
-            flag = true
-            break
-        }
-    }
-    if (!flag) {
-        return new Response("blocked", { status: 403 })
-    }
-    if (urlStr.search(/^https?:\/\//) !== 0) {
-        urlStr = 'https://' + urlStr
-    }
-    const urlObj = newUrl(urlStr)
-
-    /** @type {RequestInit} */
-    const reqInit = {
-        method: req.method,
-        headers: reqHdrNew,
-        redirect: 'manual',
-        body: req.body
-    }
-    return proxy(urlObj, reqInit)
+async function cacheResponse(key, res) {
+  const cc = res.headers.get('cache-control') || ''
+  if (cc.includes('no-store')) return
+  const cache = await caches.open('gh-proxy')
+  const body = await res.arrayBuffer()
+  const headers = new Headers(res.headers)
+  headers.set('cache-control', `public, max-age=${CACHE_TTL}`)
+  await cache.put(key, new Response(body, { status: res.status, headers }))
 }
 
-
-/**
- *
- * @param {URL} urlObj
- * @param {RequestInit} reqInit
- */
-async function proxy(urlObj, reqInit) {
-    const res = await fetch(urlObj.href, reqInit)
-    const resHdrOld = res.headers
-    const resHdrNew = new Headers(resHdrOld)
-
-    const status = res.status
-
-    if (resHdrNew.has('location')) {
-        let _location = resHdrNew.get('location')
-        if (checkUrl(_location))
-            resHdrNew.set('location', PREFIX + _location)
-        else {
-            reqInit.redirect = 'follow'
-            return proxy(newUrl(_location), reqInit)
-        }
-    }
-    resHdrNew.set('access-control-expose-headers', '*')
-    resHdrNew.set('access-control-allow-origin', '*')
-
-    resHdrNew.delete('content-security-policy')
-    resHdrNew.delete('content-security-policy-report-only')
-    resHdrNew.delete('clear-site-data')
-
-    return new Response(res.body, {
-        status,
-        headers: resHdrNew,
-    })
+function buildResponse(res) {
+  const headers = new Headers(res.headers)
+  headers.set('access-control-allow-origin', '*')
+  headers.set('access-control-expose-headers', '*')
+  headers.delete('content-security-policy')
+  headers.delete('content-security-policy-report-only')
+  headers.delete('clear-site-data')
+  return new Response(res.body, { status: res.status, headers })
 }
-
