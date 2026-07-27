@@ -1,4 +1,3 @@
-const ASSET_URL = 'https://hunshcn.github.io/gh-proxy/'
 const PREFIX = '/'
 const CACHE_TTL = 300
 
@@ -47,6 +46,87 @@ function checkWhiteList(urlStr) {
   return whiteList.some(i => urlStr.includes(i))
 }
 
+const HTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GitHub 鏂囦欢鍔犻€?/title>
+<style>
+*,:after,:before{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f5f7fa;color:#1a1a2e;transition:background .3s,color .3s;padding:20px}
+@media(prefers-color-scheme:dark){body{background:#0f0f1a;color:#e0e0e0}}
+.container{width:100%;max-width:680px;text-align:center}
+.logo{font-size:2rem;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{font-size:.95rem;color:#888;margin-bottom:32px}
+@media(prefers-color-scheme:dark){.subtitle{color:#777}}
+.input-wrap{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap}
+.input-wrap input{flex:1;min-width:0;padding:14px 18px;border:2px solid #e0e0e0;border-radius:12px;font-size:15px;background:#fff;color:#1a1a2e;transition:border-color .2s,box-shadow .2s;outline:none}
+.input-wrap input:focus{border-color:#667eea;box-shadow:0 0 0 4px rgba(102,126,234,.15)}
+@media(prefers-color-scheme:dark){.input-wrap input{background:#1a1a2e;border-color:#333;color:#e0e0e0}.input-wrap input:focus{border-color:#667eea;box-shadow:0 0 0 4px rgba(102,126,234,.2)}}
+.input-wrap button{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;transition:transform .15s,box-shadow .2s;white-space:nowrap}
+.input-wrap button:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(102,126,234,.4)}
+.input-wrap button:active{transform:translateY(0)}
+.result{display:none;margin-bottom:28px}
+.result.show{display:block}
+.result a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;text-decoration:none;color:#1a1a2e;font-size:14px;word-break:break-all;text-align:left;transition:border-color .2s}
+.result a:hover{border-color:#667eea}
+.result a .copy{padding:4px 12px;border-radius:6px;font-size:12px;background:#667eea;color:#fff;white-space:nowrap;cursor:pointer}
+@media(prefers-color-scheme:dark){.result a{background:#1a1a2e;border-color:#333;color:#e0e0e0}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
+.card{background:#fff;border-radius:12px;padding:16px;text-align:left;border:1px solid #eef0f5;transition:border-color .2s,transform .15s;cursor:pointer}
+.card:hover{border-color:#667eea;transform:translateY(-2px)}
+.card .label{font-size:12px;color:#888;margin-bottom:4px}
+.card .value{font-size:13px;color:#1a1a2e;word-break:break-all;line-height:1.5}
+@media(prefers-color-scheme:dark){.card{background:#1a1a2e;border-color:#2a2a3e}.card .value{color:#e0e0e0}}
+.card .value code{background:#f0f0f5;padding:1px 5px;border-radius:4px;font-size:12px}
+@media(prefers-color-scheme:dark){.card .value code{background:#2a2a3e;color:#ccc}}
+.footer{margin-top:40px;font-size:13px;color:#888}
+.footer a{color:#667eea;text-decoration:none}
+.footer a:hover{text-decoration:underline}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(102,126,234,.12);color:#667eea;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="badge">鈿?CF Worker 浼樺寲鐗?/div>
+<div class="logo">GitHub 鏂囦欢鍔犻€?/div>
+<p class="subtitle">绮樿创 GitHub 鏂囦欢閾炬帴锛屼竴閿姞閫熶笅杞?/p>
+<form id="form" class="input-wrap" action="./" method="get" target="_blank">
+<input type="text" name="q" placeholder="https://github.com/owner/repo/..." required>
+<button type="submit">鍔犻€熶笅杞?/button>
+</form>
+<div id="result" class="result"></div>
+<div class="cards">
+<div class="card" onclick="document.forms[0].q.value='https://github.com/user/repo/archive/master.zip';document.forms[0].submit()">
+<div class="label">鍒嗘敮婧愮爜</div>
+<div class="value"><code>/user/repo/archive/master.zip</code></div>
+</div>
+<div class="card" onclick="document.forms[0].q.value='https://github.com/user/repo/archive/v1.0.0.tar.gz';document.forms[0].submit()">
+<div class="label">Release 婧愮爜</div>
+<div class="value"><code>/user/repo/archive/v1.0.0.tar.gz</code></div>
+</div>
+<div class="card" onclick="document.forms[0].q.value='https://github.com/user/repo/releases/download/v1.0.0/app.zip';document.forms[0].submit()">
+<div class="label">Release 鏂囦欢</div>
+<div class="value"><code>/user/repo/releases/download/v1.0.0/app.zip</code></div>
+</div>
+<div class="card" onclick="document.forms[0].q.value='https://github.com/user/repo/blob/main/README.md';document.forms[0].submit()">
+<div class="label">鍒嗘敮鏂囦欢</div>
+<div class="value"><code>/user/repo/blob/main/README.md</code></div>
+</div>
+</div>
+<div class="footer">
+鍩轰簬 <a href="https://github.com/wei1104/gh-proxy">wei1104/gh-proxy</a> 路 Cloudflare Workers
+</div>
+</div>
+<script>
+var base = location.href.replace(/\\/?$/,'/');
+document.getElementById('form').addEventListener('submit',function(e){e.preventDefault();var q=this.q.value.trim();if(!q)return;var url=base+q;window.open(url);var r=document.getElementById('result');r.className='result show';r.innerHTML='<a href="'+url+'" target="_blank"><span>'+url+'</span><span class="copy" onclick="event.stopPropagation();navigator.clipboard.writeText(this.parentElement.href);this.textContent=\\"宸插鍒禱\";setTimeout(function(){this.textContent=\\"澶嶅埗\\"}.bind(this),1500)">澶嶅埗</span></a>'});
+if(location.search.includes('?q=')){var m=location.search.match(/[?&]q=([^&]+)/);if(m){var d=decodeURIComponent(m[1]);document.getElementById('form').q.value=d;var r=document.getElementById('result');r.className='result show';var u=base+d;r.innerHTML='<a href="'+u+'" target="_blank"><span>'+u+'</span><span class="copy" onclick="event.stopPropagation();navigator.clipboard.writeText(this.parentElement.href);this.textContent=\\"宸插鍒禱\";setTimeout(function(){this.textContent=\\"澶嶅埗\\"}.bind(this),1500)">澶嶅埗</span></a>'}}
+</script>
+</body>
+</html>`
+
 export default {
   async fetch(req, env, ctx) {
     try {
@@ -68,7 +148,7 @@ async function handleRequest(req, ctx) {
   path = normalizeUrl(path)
 
   if (!matchPath(path)) {
-    return fetch(ASSET_URL + url.pathname)
+    return makeRes(HTML, 200, { 'content-type': 'text/html;charset=utf-8' })
   }
 
   if (req.method === 'OPTIONS' && req.headers.has('access-control-request-headers')) {
