@@ -303,7 +303,7 @@ async function fetchHandler(event) {
     const urlObj = new URL(req.url)
 
     if (urlObj.pathname === '/' || urlObj.pathname === '') {
-        return new Response(HTML, { headers: { 'content-type': 'text/html;charset=UTF-8', 'cache-control': 'public, max-age=3600' } })
+        return new Response(new TextEncoder().encode(HTML), { headers: { 'content-type': 'text/html;charset=UTF-8', 'cache-control': 'public, max-age=3600' } })
     }
 
     let path = urlObj.searchParams.get('q')
