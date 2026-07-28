@@ -167,7 +167,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC
 </div>
 
 <script>
-const EXP_RE=/(?:releases|archive)/i,EXP_BLOB=/(?:blob|raw)/i,EXP_RAW=/raw\\.(?:githubusercontent|github)\\.com/i,EXP_GIST=/gist\\.(?:githubusercontent|github)\\.com/i;
+const EXP_RE=/(?:releases|archive)/i,EXP_BLOB=/(?:blob|raw)/i,EXP_RAW=/raw\.(?:githubusercontent|github)\.com/i,EXP_GIST=/gist\.(?:githubusercontent|github)\.com/i;
 let lastInput='';
 function getType(u){if(EXP_RE.test(u))return{t:'Release / Archive',i:'馃摝',c:'success'};if(EXP_RAW.test(u))return{t:'Raw File',i:'馃敆',c:'success'};if(EXP_BLOB.test(u))return{t:'Blob File',i:'馃搫',c:'success'};if(EXP_GIST.test(u))return{t:'Gist File',i:'馃摑',c:'success'};return null}
 function onInput(v){
@@ -181,9 +181,9 @@ setTimeout(()=>{fs.textContent='閫氳繃缂撳瓨鍔犻€?;fs.className='statu
 }
 function doProxy(){
 const v=document.getElementById('urlInput').value.trim();if(!v)return;
-let u=v;if(!/^https?:\\/\\//i.test(u))u='https://'+u;
+let u=v;if(!/^https?:\/\//i.test(u))u='https://'+u;
 const origin=location.origin+location.pathname;
-const full=u.replace(/^https?:\\/\\//,origin);
+const full=u.replace(/^https?:\/\//,origin);
 document.getElementById('resultUrl').textContent=full;
 document.getElementById('resultBox').classList.add('show');
 document.getElementById('copyBtn').classList.remove('copied');
