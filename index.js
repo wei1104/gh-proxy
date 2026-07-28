@@ -31,7 +31,7 @@ const HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>GitHub 鏂囦欢鍔犻€?- GH Proxy</title>
+<title>GitHub 文件加速 - GH Proxy</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0a0a12;--bg2:#12121e;--bg3:#1a1a2e;--bg4:#22223a;--text:#e8e8f0;--text2:#9898b0;--accent:#6366f1;--accent2:#818cf8;--accent-g:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);--border:#2a2a40;--success:#22c55e;--error:#ef4444;--warn:#f59e0b;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.3)}
@@ -81,7 +81,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC
 .tips h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)}
 .tips ul{list-style:none}
 .tips li{font-size:13px;color:var(--text2);padding:6px 0;padding-left:20px;position:relative}
-.tips li::before{content:'鈥?;position:absolute;left:0;color:var(--accent)}
+.tips li::before{content:'•';position:absolute;left:0;color:var(--accent)}
 .footer{text-align:center;padding:40px 0;color:var(--text2);font-size:12px}
 .footer a{color:var(--accent);text-decoration:none}
 .footer a:hover{text-decoration:underline}
@@ -90,94 +90,94 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC
 </head>
 <body>
 <div class="container">
-<button class="theme-toggle" onclick="toggleTheme()" title="鍒囨崲涓婚">馃寵</button>
+<button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
 
 <div class="header">
-<h1>鈿?GitHub 鏂囦欢鍔犻€?/h1>
-<p>鍔犻€?GitHub Release銆丄rchive銆佹枃浠朵笅杞?/p>
+<h1>⚡ GitHub 文件加速</h1>
+<p>加速 GitHub Release、Archive、文件下载</p>
 </div>
 
 <div class="search-box">
 <div class="input-wrapper">
-<input type="text" id="urlInput" placeholder="绮樿创 GitHub 閾炬帴..." oninput="onInput(this.value)" onkeydown="if(event.key==='Enter')doProxy()">
-<button class="btn-primary" onclick="doProxy()">鍔犻€?/button>
+<input type="text" id="urlInput" placeholder="粘贴 GitHub 链接..." oninput="onInput(this.value)" onkeydown="if(event.key==='Enter')doProxy()">
+<button class="btn-primary" onclick="doProxy()">加速</button>
 </div>
 </div>
 
 <div class="status-panel" id="statusPanel">
 <div class="status-row">
-<span class="status-icon">馃搵</span>
-<span class="status-label">閾炬帴绫诲瀷</span>
+<span class="status-icon">📋</span>
+<span class="status-label">链接类型</span>
 <span class="status-value" id="linkType">-</span>
 </div>
 <div class="status-row">
-<span class="status-icon">馃寪</span>
-<span class="status-label">杩炴帴寤惰繜</span>
+<span class="status-icon">🌐</span>
+<span class="status-label">连接延迟</span>
 <span class="status-value" id="latency">-</span>
 </div>
 <div class="status-row">
-<span class="status-icon">馃摝</span>
-<span class="status-label">鏂囦欢澶у皬</span>
+<span class="status-icon">📦</span>
+<span class="status-label">文件大小</span>
 <span class="status-value" id="fileSize">-</span>
 </div>
 </div>
 
 <div class="result-box" id="resultBox">
 <div class="result-url" id="resultUrl"></div>
-<button class="btn-copy" id="copyBtn" onclick="copyUrl()">馃搵 澶嶅埗鍔犻€熼摼鎺?/button>
+<button class="btn-copy" id="copyBtn" onclick="copyUrl()">📋 复制加速链接</button>
 </div>
 
 <div class="cards">
 <div class="card" onclick="fillExample('https://github.com/hunshcn/gh-proxy/archive/master.zip')">
-<div class="card-icon">馃搧</div>
+<div class="card-icon">📁</div>
 <div class="card-title">Archive</div>
-<div class="card-desc">鍒嗘敮婧愮爜鍘嬬缉鍖?/div>
+<div class="card-desc">分支源码压缩包</div>
 </div>
 <div class="card" onclick="fillExample('https://github.com/hunshcn/gh-proxy/releases/download/v1.0.0/example.zip')">
-<div class="card-icon">馃摝</div>
+<div class="card-icon">📦</div>
 <div class="card-title">Release</div>
-<div class="card-desc">鐗堟湰鍙戝竷鏂囦欢</div>
+<div class="card-desc">版本发布文件</div>
 </div>
 <div class="card" onclick="fillExample('https://github.com/hunshcn/gh-proxy/blob/master/index.js')">
-<div class="card-icon">馃搫</div>
+<div class="card-icon">📄</div>
 <div class="card-title">Blob</div>
-<div class="card-desc">浠撳簱鍗曚釜鏂囦欢</div>
+<div class="card-desc">仓库单个文件</div>
 </div>
 <div class="card" onclick="fillExample('https://raw.githubusercontent.com/hunshcn/gh-proxy/master/index.js')">
-<div class="card-icon">馃敆</div>
+<div class="card-icon">🔗</div>
 <div class="card-title">Raw</div>
-<div class="card-desc">鍘熷鏂囦欢閾炬帴</div>
+<div class="card-desc">原始文件链接</div>
 </div>
 </div>
 
 <div class="tips">
-<h3>馃挕 浣跨敤璇存槑</h3>
+<h3>💡 使用说明</h3>
 <ul>
-<li>鏀寔 Release銆丄rchive銆丅lob銆丷aw 鏂囦欢鍔犻€?/li>
-<li>閾炬帴甯︿笉甯﹀崗璁ご (https://) 閮藉彲浠?/li>
-<li>鍙抽敭澶嶅埗鍑烘潵鐨勯摼鎺ョ洿鎺ョ矘璐村嵆鍙?/li>
-<li>绉佹湁浠撳簱鍙湪閾炬帴鍓嶅姞 user:token@</li>
-<li>涓嶆敮鎸侀」鐩枃浠跺す锛屼粎鏀寔鍗曟枃浠?/li>
+<li>支持 Release、Archive、Blob、Raw 文件加速</li>
+<li>链接带不带协议头 (https://) 都可以</li>
+<li>右键复制出来的链接直接粘贴即可</li>
+<li>私有仓库可在链接前加 user:token@</li>
+<li>不支持项目文件夹，仅支持单文件</li>
 </ul>
 </div>
 
 <div class="footer">
-<p>Powered by <a href="https://github.com/wei1104/gh-proxy">GH Proxy</a> 路 Cloudflare Workers</p>
+<p>Powered by <a href="https://github.com/wei1104/gh-proxy">GH Proxy</a> · Cloudflare Workers</p>
 </div>
 </div>
 
 <script>
 const EXP_RE=/(?:releases|archive)/i,EXP_BLOB=/(?:blob|raw)/i,EXP_RAW=/raw\.(?:githubusercontent|github)\.com/i,EXP_GIST=/gist\.(?:githubusercontent|github)\.com/i;
 let lastInput='';
-function getType(u){if(EXP_RE.test(u))return{t:'Release / Archive',i:'馃摝',c:'success'};if(EXP_RAW.test(u))return{t:'Raw File',i:'馃敆',c:'success'};if(EXP_BLOB.test(u))return{t:'Blob File',i:'馃搫',c:'success'};if(EXP_GIST.test(u))return{t:'Gist File',i:'馃摑',c:'success'};return null}
+function getType(u){if(EXP_RE.test(u))return{t:'Release / Archive',i:'📦',c:'success'};if(EXP_RAW.test(u))return{t:'Raw File',i:'🔗',c:'success'};if(EXP_BLOB.test(u))return{t:'Blob File',i:'📄',c:'success'};if(EXP_GIST.test(u))return{t:'Gist File',i:'📝',c:'success'};return null}
 function onInput(v){
 const p=document.getElementById('statusPanel'),lt=document.getElementById('linkType'),la=document.getElementById('latency'),fs=document.getElementById('fileSize');
 if(!v.trim()){p.classList.remove('show');return}
 const tp=getType(v);
-if(tp){p.classList.add('show');lt.textContent=tp.t;lt.className='status-value '+tp.c;la.textContent='妫€娴嬩腑...';la.className='status-value loading';fs.textContent='妫€娴嬩腑...';fs.className='status-value loading';
+if(tp){p.classList.add('show');lt.textContent=tp.t;lt.className='status-value '+tp.c;la.textContent='检测中...';la.className='status-value loading';fs.textContent='检测中...';fs.className='status-value loading';
 setTimeout(()=>{const ms=Math.floor(Math.random()*80)+30;la.textContent=ms+'ms';la.className='status-value success'},300+Math.random()*400);
-setTimeout(()=>{fs.textContent='閫氳繃缂撳瓨鍔犻€?;fs.className='status-value success'},500+Math.random()*300);
-}else{p.classList.add('show');lt.textContent='鏈瘑鍒?;lt.className='status-value error';la.textContent='-';la.className='status-value';fs.textContent='-';fs.className='status-value'}
+setTimeout(()=>{fs.textContent='通过缓存加速';fs.className='status-value success'},500+Math.random()*300);
+}else{p.classList.add('show');lt.textContent='未识别';lt.className='status-value error';la.textContent='-';la.className='status-value';fs.textContent='-';fs.className='status-value'}
 }
 function doProxy(){
 const v=document.getElementById('urlInput').value.trim();if(!v)return;
@@ -187,13 +187,13 @@ const full=u.replace(/^https?:\/\//,origin);
 document.getElementById('resultUrl').textContent=full;
 document.getElementById('resultBox').classList.add('show');
 document.getElementById('copyBtn').classList.remove('copied');
-document.getElementById('copyBtn').textContent='馃搵 澶嶅埗鍔犻€熼摼鎺?;
+document.getElementById('copyBtn').textContent='📋 复制加速链接';
 }
 function copyUrl(){
 const t=document.getElementById('resultUrl').textContent;
 navigator.clipboard.writeText(t).then(()=>{
-const b=document.getElementById('copyBtn');b.classList.add('copied');b.textContent='鉁?宸插鍒?;
-setTimeout(()=>{b.classList.remove('copied');b.textContent='馃搵 澶嶅埗鍔犻€熼摼鎺?},2000);
+const b=document.getElementById('copyBtn');b.classList.add('copied');b.textContent='✅ 已复制';
+setTimeout(()=>{b.classList.remove('copied');b.textContent='📋 复制加速链接'},2000);
 });
 }
 function fillExample(u){document.getElementById('urlInput').value=u;onInput(u);doProxy()}
@@ -202,10 +202,10 @@ const h=document.documentElement,btn=document.querySelector('.theme-toggle');
 const cur=h.getAttribute('data-theme');
 const next=cur==='dark'?'light':'dark';
 h.setAttribute('data-theme',next);
-btn.textContent=next==='dark'?'馃寵':'鈽€锔?;
+btn.textContent=next==='dark'?'🌙':'☀️';
 localStorage.setItem('gh-proxy-theme',next);
 }
-(function(){const t=localStorage.getItem('gh-proxy-theme');if(t){document.documentElement.setAttribute('data-theme',t);document.querySelector('.theme-toggle').textContent=t==='dark'?'馃寵':'鈽€锔?}})();
+(function(){const t=localStorage.getItem('gh-proxy-theme');if(t){document.documentElement.setAttribute('data-theme',t);document.querySelector('.theme-toggle').textContent=t==='dark'?'🌙':'☀️'}})();
 </script>
 </body>
 </html>`
