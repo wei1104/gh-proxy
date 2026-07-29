@@ -10,6 +10,8 @@ GitHub Release、Archive、文件下载加速代理，基于 Cloudflare Workers�
 - 一键下载，点击即调用下载器
 - 链接类型自动识别（Release / Archive / Blob / Raw）
 - 连接延迟实时检测
+- **网络状态检测**：自动检测连接类型（4G/3G/2G），显示网速信息
+- **DNS 预解析**：提前解析 GitHub/jsDelivr 域名，加速首次访问
 - 响应式设计，完美适配移动端
 - 背景粒子动画 + 渐变光晕特效
 
@@ -20,6 +22,10 @@ GitHub Release、Archive、文件下载加速代理，基于 Cloudflare Workers�
 - **条件请求**：自动传递 ETag / If-Modified-Since，304 直接用缓存
 - **失败重试**：429/502/503/504 自动重试 2 次，指数退避
 - **请求限流**：60 次/分钟/IP，防止滥用
+- **Range 请求支持**：支持断点续传，下载器可从断点继续
+- **流式响应**：边收边传，降低首字节时间（TTFB）
+- **可配置超时**：默认 30 秒，避免长时间挂起
+- **镜像回退**：GitHub 失败自动切换 jsDelivr CDN
 - **自定义错误页**：友好的错误页面替代纯文本
 - **Timing 响应头**：server-timing 返回请求耗时，便于调试
 - **请求头优化**：移除不必要的 hop-by-hop 头
@@ -72,7 +78,7 @@ git clone https://user:TOKEN@your-worker.dev/https://github.com/user/repo.git
 
 ```javascript
 const Config = {
-    jsdelivr: 0,                    // 使用 jsDelivr 镜像：0=关闭, 1=开启
+    jsdelivr: 0,                    // 使用 jsDelivr 镜像：0=关闭, 1=开启（硬切换）
     cache: {
         release: 86400,            // Release/Archive 缓存时间（秒），默认 1 天
         raw: 3600,                 // Raw 文件缓存时间（秒），默认 1 小时
@@ -85,7 +91,9 @@ const Config = {
     rateLimit: {
         max: 60,                   // 单 IP 最大请求数
         window: 60000              // 限流窗口（毫秒），默认 1 分钟
-    }
+    },
+    timeout: 30000,                // 请求超时时间（毫秒），默认 30 秒
+    fallback: true                 // GitHub 失败时自动回退到 jsDelivr 镜像
 }
 ```
 
@@ -106,6 +114,16 @@ rateLimit: { max: Infinity, window: 60000 }
 retry: { count: 3, delay: 1000 }
 ```
 
+**关闭镜像回退**（只用 GitHub）：
+```javascript
+fallback: false
+```
+
+**自定义超时**（慢速网络可调大）：
+```javascript
+timeout: 60000
+```
+
 ## 缓存机制
 
 ```
@@ -113,9 +131,11 @@ retry: { count: 3, delay: 1000 }
     ↓
 Cache API 命中? ──是──→ 返回缓存（CF-HIT）
     ↓ 否
-发送到 GitHub（带条件请求头）
+发送到 GitHub（带条件请求头 + Range 头）
     ↓
 304 Not Modified? ──是──→ 用缓存响应
+    ↓ 否
+GitHub 失败? ──是──→ 回退到 jsDelivr 镜像
     ↓ 否
 正常响应 → 写入 Cache API → 返回客户端
 ```
@@ -123,6 +143,17 @@ Cache API 命中? ──是──→ 返回缓存（CF-HIT）
 - **stale-while-revalidate**：缓存过期 5 分钟内仍返回旧内容，后台异步刷新
 - **请求合并**：同一时间对同一 URL 的多个请求，只回源一次
 - **失败重试**：遇到限流或服务器错误自动重试，指数退避
+- **镜像回退**：GitHub 5xx 或超时时自动切换 jsDelivr
+
+## 网络优化说明
+
+| 功能 | 说明 |
+|------|------|
+| **Range 请求** | 支持 `Range: bytes=0-1023`，返回 `206 Partial Content`，下载器可断点续传 |
+| **流式响应** | Worker 不缓冲整个响应体，边从 GitHub 接收边传给客户端 |
+| **超时控制** | 默认 30 秒超时，超时后自动重试或回退到镜像 |
+| **DNS 预解析** | HTML 中预解析 `github.com`、`raw.githubusercontent.com`、`cdn.jsdelivr.net` |
+| **网络检测** | 前端使用 Network Information API 检测连接类型（4G/3G/2G） |
 
 ## 响应头说明
 
@@ -130,6 +161,7 @@ Cache API 命中? ──是──→ 返回缓存（CF-HIT）
 |--------|------|
 | `x-cache-status` | `CF-HIT` 表示命中边缘缓存 |
 | `server-timing` | `total;dur=xx` 请求总耗时（毫秒） |
+| `accept-ranges` | `bytes` 表示支持 Range 请求 |
 
 ## 致谢
 
