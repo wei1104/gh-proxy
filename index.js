@@ -4,8 +4,7 @@ const ASSET_URL = 'https://hunshcn.github.io/gh-proxy/'
 const PREFIX = '/'
 const Config = {
     jsdelivr: 0,
-    cache: { release: 86400, raw: 3600, static: 604800 },
-    kv: { enabled: true, releaseTTL: 604800, rawTTL: 86400 }
+    cache: { release: 86400, raw: 3600, static: 604800 }
 }
 
 const whiteList = []
@@ -58,12 +57,6 @@ function getCacheTTL(url) {
     return Config.cache.static
 }
 
-function getKVTTL(url) {
-    if (/releases|archive/.test(url)) return Config.kv.releaseTTL
-    if (/raw/.test(url)) return Config.kv.rawTTL
-    return Config.kv.releaseTTL
-}
-
 async function checkCache(request) {
     try { return await caches.default.match(request) } catch (err) { return undefined }
 }
@@ -78,24 +71,6 @@ function putCache(event, request, response, ttl) {
         status: response.status, statusText: response.statusText, headers: headers,
     })
     event.waitUntil(cache.put(cacheKey, responseToCache))
-}
-
-async function checkKV(url) {
-    if (!Config.kv.enabled || typeof KV === 'undefined') return undefined
-    try {
-        var cached = await KV.get(url)
-        if (cached) {
-            return new Response(cached, {
-                headers: { 'content-type': 'application/octet-stream', 'x-cache-status': 'KV-HIT', 'cache-control': 'public, max-age=' + getKVTTL(url) }
-            })
-        }
-    } catch (err) {}
-    return undefined
-}
-
-function putKV(event, url, response, ttl) {
-    if (!Config.kv.enabled || typeof KV === 'undefined') return
-    event.waitUntil(response.clone().text().then(function(body) { return KV.put(url, body, { expirationTtl: ttl }) }))
 }
 
 function optimizeRequestHeaders(headers) {
@@ -145,9 +120,6 @@ async function fetchHandler(event) {
 }
 
 async function proxy(event, urlObj, reqInit) {
-    var kvCached = await checkKV(urlObj.href)
-    if (kvCached) return kvCached
-
     var req = new Request(urlObj.href, reqInit)
     var apiCached = await checkCache(req)
     if (apiCached) return apiCached
@@ -172,7 +144,6 @@ async function proxy(event, urlObj, reqInit) {
     var ttl = getCacheTTL(urlObj.href)
     if (ttl > 0) {
         putCache(event, req, response, ttl)
-        putKV(event, urlObj.href, response, getKVTTL(urlObj.href))
     }
     return response
 }
