@@ -4,13 +4,26 @@ GitHub Release、Archive、文件下载加速代理，基于 Cloudflare Workers�
 
 ## 功能特性
 
+### 前端
 - 支持 Release、Archive、Blob、Raw 文件加速下载
 - 现代化暗黑主题 UI，支持暗色/亮色主题切换
 - 一键下载，点击即调用下载器
 - 链接类型自动识别（Release / Archive / Blob / Raw）
 - 连接延迟实时检测
-- Cache API + KV 双层缓存加速
 - 响应式设计，完美适配移动端
+- 背景粒子动画 + 渐变光晕特效
+
+### 后端优化
+- **Cache API 边缘缓存**：Release 1天、Raw 1小时、静态资源 7天
+- **stale-while-revalidate**：缓存过期后先返回旧内容，后台刷新
+- **请求合并（Dedupe）**：同一 URL 并发请求只回源一次
+- **条件请求**：自动传递 ETag / If-Modified-Since，304 直接用缓存
+- **失败重试**：429/502/503/504 自动重试 2 次，指数退避
+- **请求限流**：60 次/分钟/IP，防止滥用
+- **自定义错误页**：友好的错误页面替代纯文本
+- **Timing 响应头**：server-timing 返回请求耗时，便于调试
+- **请求头优化**：移除不必要的 hop-by-hop 头
+- **TextEncoder 编码**：确保中文正确显示
 
 ## 使用方法
 
@@ -49,16 +62,7 @@ git clone https://user:TOKEN@your-worker.dev/https://github.com/user/repo.git
 4. 将 `index.js` 的内容粘贴到编辑器中
 5. 保存并部署
 
-### 2. 配置 KV 缓存（可选）
-
-1. 在 Cloudflare Dashboard 中创建 KV Namespace
-2. 进入 Worker 设置 → Bindings
-3. 添加 KV Namespace Binding：
-   - Variable name: `KV`
-   - KV namespace: 选择刚创建的 Namespace
-4. 重新部署
-
-### 3. 自定义域名（可选）
+### 2. 自定义域名（可选）
 
 在 Worker 设置 → Triggers → Custom Domains 中添加你的域名。
 
@@ -68,28 +72,64 @@ git clone https://user:TOKEN@your-worker.dev/https://github.com/user/repo.git
 
 ```javascript
 const Config = {
-    jsdelivr: 0,           // 使用 jsDelivr 镜像：0=关闭, 1=开启
+    jsdelivr: 0,                    // 使用 jsDelivr 镜像：0=关闭, 1=开启
     cache: {
-        release: 86400,    // Release 文件缓存时间（秒）
-        raw: 3600,         // Raw 文件缓存时间（秒）
-        static: 604800,    // 静态资源缓存时间（秒）
+        release: 86400,            // Release/Archive 缓存时间（秒），默认 1 天
+        raw: 3600,                 // Raw 文件缓存时间（秒），默认 1 小时
+        static: 604800             // 静态资源缓存时间（秒），默认 7 天
     },
-    kv: {
-        enabled: true,     // 是否启用 KV 缓存
-        releaseTTL: 604800, // KV 中 Release 文件过期时间（秒）
-        rawTTL: 86400,      // KV 中 Raw 文件过期时间（秒）
+    retry: {
+        count: 2,                  // 失败重试次数
+        delay: 500                 // 基础重试延迟（毫秒），实际按 2^n 递增
+    },
+    rateLimit: {
+        max: 60,                   // 单 IP 最大请求数
+        window: 60000              // 限流窗口（毫秒），默认 1 分钟
     }
 }
 ```
 
-## 性能优化
+### 配置示例
 
-本项目包含以下性能优化：
+**提高缓存时间**（适合访问量大的仓库）：
+```javascript
+cache: { release: 604800, raw: 86400, static: 2592000 }
+```
 
-- **Cache API 缓存**：Cloudflare 边缘节点缓存，减少源站请求
-- **KV 持久化缓存**：跨边缘节点共享缓存，适合大文件
-- **请求头优化**：移除不必要的 hop-by-hop 头
-- **TextEncoder 编码**：确保中文正确显示
+**关闭限流**：
+```javascript
+rateLimit: { max: Infinity, window: 60000 }
+```
+
+**更多重试**：
+```javascript
+retry: { count: 3, delay: 1000 }
+```
+
+## 缓存机制
+
+```
+客户端请求
+    ↓
+Cache API 命中? ──是──→ 返回缓存（CF-HIT）
+    ↓ 否
+发送到 GitHub（带条件请求头）
+    ↓
+304 Not Modified? ──是──→ 用缓存响应
+    ↓ 否
+正常响应 → 写入 Cache API → 返回客户端
+```
+
+- **stale-while-revalidate**：缓存过期 5 分钟内仍返回旧内容，后台异步刷新
+- **请求合并**：同一时间对同一 URL 的多个请求，只回源一次
+- **失败重试**：遇到限流或服务器错误自动重试，指数退避
+
+## 响应头说明
+
+| Header | 说明 |
+|--------|------|
+| `x-cache-status` | `CF-HIT` 表示命中边缘缓存 |
+| `server-timing` | `total;dur=xx` 请求总耗时（毫秒） |
 
 ## 致谢
 
