@@ -7,9 +7,10 @@ GitHub Release、Archive、文件下载加速代理，基于 Cloudflare Workers�
 ### 前端
 - 支持 Release、Archive、Blob、Raw 文件加速下载
 - 现代化暗黑主题 UI，支持暗色/亮色主题切换
-- 点击下载自动触发浏览器下载，同时显示可复制的加速链接
+- 一键下载，点击即调用下载器
 - 链接类型自动识别（Release / Archive / Blob / Raw）
 - 连接延迟实时检测
+- **网络状态检测**：自动检测连接类型（4G/3G/2G），显示网速信息
 - **DNS 预解析**：提前解析 GitHub/jsDelivr 域名，加速首次访问
 - 响应式设计，完美适配移动端
 - 背景粒子动画 + 渐变光晕特效
@@ -152,6 +153,7 @@ GitHub 失败? ──是──→ 回退到 jsDelivr 镜像
 | **流式响应** | Worker 不缓冲整个响应体，边从 GitHub 接收边传给客户端 |
 | **超时控制** | 默认 30 秒超时，超时后自动重试或回退到镜像 |
 | **DNS 预解析** | HTML 中预解析 `github.com`、`raw.githubusercontent.com`、`cdn.jsdelivr.net` |
+| **网络检测** | 前端使用 Network Information API 检测连接类型（4G/3G/2G） |
 
 ## 响应头说明
 
